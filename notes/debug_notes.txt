@@ -1,0 +1,21 @@
+
+
+getNeighbors
+
+start 327
+end   585
+
+717 - Debug
+
+
+        mul     $t0, $s0, $s0
+updateBoardClearloop:
+        li      $t1, 32
+        sb      $t1, 0($s5)
+
+        addi    $t0, $t0, -1
+        bne     $t0, $zero, updateBoardClearloop
+		
+		jal     updateBoardS    # update to arrayS 			##### FIND THIS
+        jal     copyStP         # move arrayS data to arrayP
+

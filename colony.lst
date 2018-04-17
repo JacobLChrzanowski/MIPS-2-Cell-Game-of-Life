@@ -1,0 +1,1449 @@
+   1 0000               #
+   2 0000               # FILE:         $Colony.asm$
+   3 0000               # Contributors:
+   4 0000               #               <<<Jacob L. Chrzanowski>>>
+   5 0000               #
+   6 0000               # DESCRIPTION:
+   7 0000               #       This program reads up to 10 of numbers (or until the user
+   8 0000               #       enters the value 9999) from the standard input, and then 
+   9 0000               #       computes and prints their sum.
+  10 0000               #
+  11 0000               # ARGUMENTS:
+  12 0000               #       None
+  13 0000               #
+  14 0000               # INPUT:
+  15 0000               #       The numbers to be summed.
+  16 0000               #
+  17 0000               # OUTPUT:
+  18 0000               #       A "before" line with the 10 numbers in the order they were
+  19 0000               #       entered, and an "Sum=" and then the sum of all the numbers
+  20 0000               #
+  21 0000               #
+  22 0000               #
+  23 0000               
+  24 0000               
+  25 0000               PRINT_STRING = 4                # arg for syscall to write string
+  26 0000               PRINT_CHAR = 11                 # arg for syscall to write char
+  27 0000               PRINT_INT = 1                   # arg for syscall to write int
+  28 0000               
+  29 0000               
+  30 0000               #
+  31 0000               # DATA AREAS
+  32 0000               #
+  33 0000               
+  34 0000                       .data
+  35 0000               
+  36 0000                       .align  2               # word data must be on word boundaries
+  37 0000               arrayP:  
+  38 0000 00000000	        .space  900             # Reserve space for array to hold data
+          00000000
+          00000000
+          00000000
+          00000000
+          00000000
+  39 0384                                               # the array is up to MAX_SIZE words (4 bytes
+  40 0384                                               # each). Note the array isn't initialized.
+  41 0384               arrayS:
+  42 0384 00000000	        .space  900             # Scrap array
+          00000000
+          00000000
+          00000000
+          00000000
+          00000000
+  43 0708               
+  44 0708               boardSize:
+  45 0708 00000000	        .word 0                 # board size variable
+  46 070c               
+  47 070c               genToRun:
+  48 070c 00000000	        .word 0                 # generations to run variable
+  49 0710               
+  50 0710               generation:
+  51 0710 00000000	        .word 0                 # generations to run variable
+  52 0714               
+  53 0714               updateBoardcol:
+  54 0714 00000000	        .word 0                 # updateBoard col var
+  55 0718               
+  56 0718               
+  57 0718               
+  58 0718               
+  59 0718               size:
+  60 0718 00000000	        .word   0               # Actual number of values in the array
+  61 071c               
+  62 071c                       .align  0               # string data doesn't have to be aligned
+  63 071c               space:
+  64 071c 2000    	        .asciiz " "
+  65 071e               lf:
+  66 071e 0A00    	        .asciiz "\n"
+  67 0720               plus:
+  68 0720 2B00    	        .asciiz "+"
+  69 0722               dash:
+  70 0722 2D00    	        .asciiz "-"
+  71 0724               pipe:
+  72 0724 7C00    	        .asciiz "|"
+  73 0726               debug:
+  74 0726 44454255	        .asciiz "DEBUG\n"
+          470A00  
+  75 072d               debuga:
+  76 072d 44454255	        .asciiz "DEBUGa\n"
+          47610A00
+  77 0735               
+  78 0735               sText1:
+  79 0735 2A2A2A2A	        .asciiz "**********************\n"
+          2A2A2A2A
+          2A2A2A2A
+          2A2A2A2A
+          2A2A2A2A
+          2A2A0A00
+  80 074d               sText2:
+  81 074d 2A2A2A2A	        .asciiz "****    Colony    ****\n"
+          20202020
+          436F6C6F
+          6E792020
+          20202A2A
+          2A2A0A00
+  82 0765               sText3:
+  83 0765 2A2A2A2A	        .asciiz "**********************\n"
+          2A2A2A2A
+          2A2A2A2A
+          2A2A2A2A
+          2A2A2A2A
+          2A2A0A00
+  84 077d               
+  85 077d               iText1:
+  86 077d 0A3D3D3D	        .asciiz "\n====    GENERATION "
+          3D202020
+          2047454E
+          45524154
+          494F4E20
+          00      
+  87 0792               iText2:
+  88 0792 20202020	        .asciiz "    ====\n"
+          3D3D3D3D
+          0A00    
+  89 079c               
+  90 079c               
+  91 079c               pText1:                         # 4 <= size <= 30
+  92 079c 0A456E74	        .asciiz "\nEnter board size: "
+          65722062
+          6F617264
+          2073697A
+          653A2000
+  93 07b0               
+  94 07b0               pText2:                         # 0 <= generations <= 20
+  95 07b0 456E7465	        .asciiz "Enter number of generations to run: "
+          72206E75
+          6D626572
+          206F6620
+          67656E65
+          72617469
+  96 07d5               
+  97 07d5               pText3:                         # 0 <= numAlive_A <= (total 
+  98 07d5                                               #  number of cells in the board)
+  99 07d5 456E7465	        .asciiz "Enter number of live cells for colony A: "
+          72206E75
+          6D626572
+          206F6620
+          6C697665
+          2063656C
+ 100 07ff               
+ 101 07ff               pText4:                         # 0 <= loc < boardSize
+ 102 07ff                                               #  duplicate locations are not allowed
+ 103 07ff 53746172	        .asciiz "Start entering locations\n"
+          7420656E
+          74657269
+          6E67206C
+          6F636174
+          696F6E73
+ 104 0819               
+ 105 0819               pText5:                         # 0<= numAlive_B <= (total
+ 106 0819                                               #  number of cells in the board)
+ 107 0819 456E7465	        .asciiz "Enter number of live cells for colony B: "
+          72206E75
+          6D626572
+          206F6620
+          6C697665
+          2063656C
+ 108 0843               
+ 109 0843               
+ 110 0843               
+ 111 0843               p1Warn:
+ 112 0843 5741524E	        .asciiz "WARNING: illegal board size, try again: "
+          494E473A
+          20696C6C
+          6567616C
+          20626F61
+          72642073
+ 113 086c               
+ 114 086c               p2Warn:
+ 115 086c 5741524E	        .asciiz "WARNING: illegal number of generations, try again: "
+          494E473A
+          20696C6C
+          6567616C
+          206E756D
+          62657220
+ 116 08a0               
+ 117 08a0               p3Warn:
+ 118 08a0 5741524E	        .asciiz "WARNING: illegal number of live cells, try again: "
+          494E473A
+          20696C6C
+          6567616C
+          206E756D
+          62657220
+ 119 08d3               
+ 120 08d3               p4Warn:
+ 121 08d3 4552524F	        .asciiz "ERROR: illegal point location\n"
+          523A2069
+          6C6C6567
+          616C2070
+          6F696E74
+          206C6F63
+ 122 08f2               
+ 123 08f2               #
+ 124 08f2               # CODE AREAS
+ 125 08f2               #
+ 126 0000                       .text                   # this is program code
+ 127 0000                       .align  2               # instructions must be on word boundaries
+ 128 0000               
+ 129 0000                       .globl  main            # main is a global label
+ 130 0000               
+ 131 0000               
+ 132 0000               
+ 133 0000               A_FRAMESIZE_8 = 8
+ 134 0000               A_FRAMESIZE_40 = 40
+ 135 0000               
+ 136 0000               
+ 137 0000               getInput:
+ 138 0000 34020005	        li      $v0, 5          # get the generations to run from user input
+ 139 0004 0000000C	        syscall
+ 140 0008               
+ 141 0008 03E00008	        jr      $ra
+ 142 000c               
+ 143 000c               printChar:
+ 144 000c 3402000B	        li      $v0, PRINT_CHAR # set syscall to print char
+ 145 0010 0000000C	        syscall
+ 146 0014 03E00008	        jr      $ra
+ 147 0018               
+ 148 0018               printString:
+ 149 0018 34020004	        li      $v0, 4          # print intro text
+ 150 001c 0000000C	        syscall
+ 151 0020 03E00008	        jr      $ra
+ 152 0024               
+ 153 0024               printNum:
+ 154 0024 34020001	        li      $v0, 1
+ 155 0028 0000000C	        syscall
+ 156 002c 03E00008	        jr      $ra
+ 157 0030               
+ 158 0030               
+ 159 0030               
+ 160 0030               pBoardT:                        # print top of board in a loop
+ 161 0030 3C040000	        la      $a0, dash       # end of top row
+     0034 34840000
+ 162 0038 34020004	        li      $v0, 4
+ 163 003c 0000000C	        syscall
+ 164 0040               
+ 165 0040 2273FFFF	        addi    $s3, $s3, -1    # count down, loop if not done yet
+ 166 0044 1413FFFA	        bne     $zero, $s3, pBoardT
+ 167 0048               
+ 168 0048               
+ 169 0048               
+ 170 0048 03E00008	        jr      $ra
+ 171 004c               
+ 172 004c               
+ 173 004c               
+ 174 004c               
+ 175 004c               
+ 176 004c               printRowM:
+ 177 004c 23BDFFF8	        addi    $sp, $sp, -A_FRAMESIZE_8
+ 178 0050 AFBF0004	        sw      $ra, -4+A_FRAMESIZE_8($sp)
+ 179 0054               
+ 180 0054 0200A021	        move    $s4, $s0        # counts col number (iterator)
+ 181 0058               
+ 182 0058               
+ 183 0058 3C040000	        la      $a0, pipe       # side
+     005c 34840000
+ 184 0060 0C000006	        jal     printString
+ 185 0064               
+ 186 0064               printRowMHelp:
+ 187 0064 92B60000	        lbu     $s6, 0($s5)
+ 188 0068 02C02021	        move    $a0, $s6
+ 189 006c                       
+ 190 006c 0C000003	        jal     printChar
+ 191 0070 22B50001	        addi    $s5, $s5, 1
+ 192 0074               
+ 193 0074 2294FFFF	        addi    $s4, $s4, -1
+ 194 0078 1414FFFA	        bne     $zero, $s4, printRowMHelp
+ 195 007c               
+ 196 007c               
+ 197 007c 3C040000	        la      $a0, pipe       # side
+     0080 34840000
+ 198 0084 0C000006	        jal     printString
+ 199 0088 3C040000	        la      $a0, lf         # side
+     008c 34840000
+ 200 0090 0C000006	        jal     printString
+ 201 0094                       
+ 202 0094 8FBF0004	        lw      $ra, -4+A_FRAMESIZE_8($sp)
+ 203 0098 23BD0008	        addi    $sp, $sp, A_FRAMESIZE_8
+ 204 009c               
+ 205 009c 03E00008	        jr      $ra
+ 206 00a0               
+ 207 00a0               
+ 208 00a0               printRowS:
+ 209 00a0 23BDFFF8	        addi    $sp, $sp, -A_FRAMESIZE_8
+ 210 00a4 AFBF0004	        sw      $ra, -4+A_FRAMESIZE_8($sp)
+ 211 00a8                   
+ 212 00a8               printRowSHelp:
+ 213 00a8 0200A021	        move    $s4, $s0        # counts col number (iterator)
+ 214 00ac 2273FFFF	        addi    $s3, $s3, -1
+ 215 00b0 0C000013	        jal     printRowM
+ 216 00b4 1413FFFC	        bne     $zero, $s3, printRowSHelp
+ 217 00b8               
+ 218 00b8 8FBF0004	        lw      $ra, -4+A_FRAMESIZE_8($sp)
+ 219 00bc 23BD0008	        addi    $sp, $sp, A_FRAMESIZE_8
+ 220 00c0               
+ 221 00c0 03E00008	        jr $ra
+ 222 00c4               
+ 223 00c4               
+ 224 00c4               
+ 225 00c4               
+ 226 00c4               
+ 227 00c4               printBoard:
+ 228 00c4 23BDFFD8	        addi    $sp, $sp, -A_FRAMESIZE_40
+ 229 00c8 AFBF0024	        sw      $ra, -4+A_FRAMESIZE_40($sp)
+ 230 00cc AFB7001C	        sw      $s7, 28($sp)
+ 231 00d0 AFB60018	        sw      $s6, 24($sp)
+ 232 00d4 AFB50014	        sw      $s5, 20($sp)
+ 233 00d8 AFB40010	        sw      $s4, 16($sp)
+ 234 00dc AFB3000C	        sw      $s3, 12($sp)
+ 235 00e0 AFB20008	        sw      $s2, 8($sp)
+ 236 00e4 AFB10004	        sw      $s1, 4($sp)
+ 237 00e8 AFB00000	        sw      $s0, 0($sp)
+ 238 00ec               
+ 239 00ec 3C010000	        lw      $s0, boardSize  # boardSize
+     00f0 8C300000
+ 240 00f4 3C010000	        lw      $s1, genToRun   # genToRun
+     00f8 8C310000
+ 241 00fc 02100018	        mul     $s2, $s0, $s0   # boardSize^2 (number of squares on the board)
+     0100 00009012
+ 242 0104 3C010000	        lw      $s3, generation
+     0108 8C330000
+ 243 010c               
+ 244 010c 3C040000	        la      $a0, iText1     # print out sequence for generation declaration
+     0110 34840000
+ 245 0114 0C000006	        jal     printString
+ 246 0118 3C010000	        lw      $a0, generation
+     011c 8C240000
+ 247 0120 0C000009	        jal     printNum
+ 248 0124 3C040000	        la      $a0, iText2
+     0128 34840000
+ 249 012c 0C000006	        jal     printString
+ 250 0130               
+ 251 0130               
+ 252 0130 3C040000	        la      $a0, plus       # start printing the top board wall
+     0134 34840000
+ 253 0138 0C000006	        jal     printString
+ 254 013c 3C010000	        lw      $s3, boardSize  # holds boardSize but \/ iterator in pBoardT
+     0140 8C330000
+ 255 0144 0C00000C	        jal     pBoardT
+ 256 0148 3C040000	        la      $a0, plus
+     014c 34840000
+ 257 0150 0C000006	        jal     printString
+ 258 0154 3C040000	        la      $a0, lf
+     0158 34840000
+ 259 015c 0C000006	        jal     printString     # end of top row
+ 260 0160               
+ 261 0160               
+ 262 0160 02009821	        move    $s3, $s0        # counts row number (iterator)
+ 263 0164 3C150000	        la      $s5, arrayP
+     0168 36B50000
+ 264 016c 0C000028	        jal     printRowS
+ 265 0170               
+ 266 0170 3C040000	        la      $a0, plus       # start printing the bottom board wall
+     0174 34840000
+ 267 0178 0C000006	        jal     printString
+ 268 017c 3C010000	        lw      $s3, boardSize  # holds boardSize but \/ iterator in pBoardT
+     0180 8C330000
+ 269 0184 0C00000C	        jal     pBoardT
+ 270 0188 3C040000	        la      $a0, plus
+     018c 34840000
+ 271 0190 0C000006	        jal     printString
+ 272 0194 3C040000	        la      $a0, lf
+     0198 34840000
+ 273 019c 0C000006	        jal     printString     # end of top row
+ 274 01a0               
+ 275 01a0               
+ 276 01a0 8FBF0024	        lw      $ra, -4+A_FRAMESIZE_40($sp)
+ 277 01a4 8FB7001C	        lw      $s7, 28($sp)
+ 278 01a8 8FB60018	        lw      $s6, 24($sp)
+ 279 01ac 8FB50014	        lw      $s5, 20($sp)
+ 280 01b0 8FB40010	        lw      $s4, 16($sp)
+ 281 01b4 8FB3000C	        lw      $s3, 12($sp)
+ 282 01b8 8FB20008	        lw      $s2, 8($sp)
+ 283 01bc 8FB10004	        lw      $s1, 4($sp)
+ 284 01c0 8FB00000	        lw      $s0, 0($sp)
+ 285 01c4 23BD0028	        addi    $sp, $sp, A_FRAMESIZE_40
+ 286 01c8 03E00008	        jr      $ra
+ 287 01cc               
+ 288 01cc               
+ 289 01cc               copyStP:
+ 290 01cc 23BDFFD8	        addi    $sp, $sp, -A_FRAMESIZE_40
+ 291 01d0 AFBF0024	        sw      $ra, -4+A_FRAMESIZE_40($sp)
+ 292 01d4 AFB7001C	        sw      $s7, 28($sp)
+ 293 01d8 AFB60018	        sw      $s6, 24($sp)
+ 294 01dc AFB50014	        sw      $s5, 20($sp)
+ 295 01e0 AFB40010	        sw      $s4, 16($sp)
+ 296 01e4 AFB3000C	        sw      $s3, 12($sp)
+ 297 01e8 AFB20008	        sw      $s2, 8($sp)
+ 298 01ec AFB10004	        sw      $s1, 4($sp)
+ 299 01f0 AFB00000	        sw      $s0, 0($sp)
+ 300 01f4               
+ 301 01f4 3C010000	        lw      $s0, boardSize  # boardSize
+     01f8 8C300000
+ 302 01fc 02100018	        mul     $s2, $s0, $s0   # boardSize^2 (number of squares on the board)
+     0200 00009012
+ 303 0204               
+ 304 0204 3C130000	        la      $s3, arrayP
+     0208 36730000
+ 305 020c 3C140000	        la      $s4, arrayS
+     0210 36940000
+ 306 0214               
+ 307 0214 0253B020	        add     $s6, $s2, $s3
+ 308 0218               
+ 309 0218               copyStPloop:
+ 310 0218 92950000	        lbu     $s5, 0($s4)
+ 311 021c A2750000	        sb      $s5, 0($s3)
+ 312 0220               
+ 313 0220               
+ 314 0220 22940001	        addi    $s4, $s4, 1
+ 315 0224 22730001	        addi    $s3, $s3, 1
+ 316 0228                       
+ 317 0228               
+ 318 0228               
+ 319 0228 1676FFFB	        bne     $s3, $s6, copyStPloop
+ 320 022c                       
+ 321 022c                       
+ 322 022c               
+ 323 022c               
+ 324 022c 8FBF0024	        lw      $ra, -4+A_FRAMESIZE_40($sp)
+ 325 0230 8FB7001C	        lw      $s7, 28($sp)
+ 326 0234 8FB60018	        lw      $s6, 24($sp)
+ 327 0238 8FB50014	        lw      $s5, 20($sp)
+ 328 023c 8FB40010	        lw      $s4, 16($sp)
+ 329 0240 8FB3000C	        lw      $s3, 12($sp)
+ 330 0244 8FB20008	        lw      $s2, 8($sp)
+ 331 0248 8FB10004	        lw      $s1, 4($sp)
+ 332 024c 8FB00000	        lw      $s0, 0($sp)
+ 333 0250 23BD0028	        addi    $sp, $sp, A_FRAMESIZE_40
+ 334 0254 03E00008	        jr      $ra
+ 335 0258               
+ 336 0258               
+ 337 0258               getNeighbors:
+ 338 0258 23BDFFF8	        addi    $sp, $sp, -A_FRAMESIZE_8
+ 339 025c AFBF0004	        sw      $ra, -4+A_FRAMESIZE_8($sp)
+ 340 0260               
+ 341 0260                       # right
+ 342 0260 22280000	        addi    $t0, $s1, 0     # row+0
+ 343 0264 22490001	        addi    $t1, $s2, 1     # col+1
+ 344 0268 340A0000	        li      $t2, 0          # position in array (calculated later)
+ 345 026c 240DFFFF	        li      $t5, -1         # load -1
+ 346 0270               
+ 347 0270 15300001	        bne     $t1, $s0, getNeighborsRg
+ 348 0274 01304822	        sub     $t1, $t1, $s0
+ 349 0278               getNeighborsRg:
+ 350 0278 01100018	        mul     $t2, $t0, $s0   # boardSize * row
+     027c 00005012
+ 351 0280 01495020	        add     $t2, $t2, $t1   # boardSize * row + col
+ 352 0284 01545020	        add     $t2, $t2, $s4   # boardSize * row + col + arrayP address
+ 353 0288 914A0000	        lbu     $t2, 0($t2)     # get char at $t2, throw away $t2
+ 354 028c               
+ 355 028c 340B0041	        li      $t3, 65         # holds 'A'
+ 356 0290 340C0042	        li      $t4, 66         # holds 'B'
+ 357 0294               
+ 358 0294 114B0002	        beq     $t2, $t3, getNeighborsRgA
+ 359 0298 114C0003	        beq     $t2, $t4, getNeighborsRgB
+ 360 029c 080000AC	        j       getNeighborsRgS
+ 361 02a0               
+ 362 02a0               getNeighborsRgA:
+ 363 02a0 22D60001	        addi    $s6, $s6, 1     # add 1 to A_neighbor count
+ 364 02a4 080000AC	        j       getNeighborsRgS
+ 365 02a8               getNeighborsRgB:
+ 366 02a8 22F70001	        addi    $s7, $s7, 1     # add 1 to B_neighbor count
+ 367 02ac 080000AC	        j       getNeighborsRgS
+ 368 02b0               getNeighborsRgS:
+ 369 02b0               
+ 370 02b0               
+ 371 02b0                       # left
+ 372 02b0 22280000	        addi    $t0, $s1, 0     # row+0
+ 373 02b4 2249FFFF	        addi    $t1, $s2, -1    # col-1
+ 374 02b8 340A0000	        li      $t2, 0          # position in array (calculated later)
+ 375 02bc 240DFFFF	        li      $t5, -1         # load -1
+ 376 02c0               
+ 377 02c0 152D0001	        bne     $t1, $t5, getNeighborsLg
+ 378 02c4 01304820	        add     $t1, $t1, $s0
+ 379 02c8               getNeighborsLg:
+ 380 02c8 01100018	        mul     $t2, $t0, $s0   # boardSize * row
+     02cc 00005012
+ 381 02d0 01495020	        add     $t2, $t2, $t1   # boardSize * row + col
+ 382 02d4 01545020	        add     $t2, $t2, $s4   # boardSize * row + col + arrayP address
+ 383 02d8 914A0000	        lbu     $t2, 0($t2)     # get char at $t2, throw away $t2
+ 384 02dc               
+ 385 02dc 340B0041	        li      $t3, 65         # holds 'A'
+ 386 02e0 340C0042	        li      $t4, 66         # holds 'B'
+ 387 02e4               
+ 388 02e4 114B0002	        beq     $t2, $t3, getNeighborsLgA
+ 389 02e8 114C0003	        beq     $t2, $t4, getNeighborsLgB
+ 390 02ec 080000C0	        j       getNeighborsLgS
+ 391 02f0               
+ 392 02f0               getNeighborsLgA:
+ 393 02f0 22D60001	        addi    $s6, $s6, 1     # add 1 to A_neighbor count
+ 394 02f4 080000C0	        j       getNeighborsLgS
+ 395 02f8               getNeighborsLgB:
+ 396 02f8 22F70001	        addi    $s7, $s7, 1     # add 1 to B_neighbor count
+ 397 02fc 080000C0	        j       getNeighborsLgS
+ 398 0300               getNeighborsLgS:
+ 399 0300               
+ 400 0300               
+ 401 0300                       # up
+ 402 0300 2228FFFF	        addi    $t0, $s1, -1    # row-1
+ 403 0304 22490000	        addi    $t1, $s2, 0     # col+0
+ 404 0308 340A0000	        li      $t2, 0          # position in array (calculated later)
+ 405 030c 240DFFFF	        li      $t5, -1         # load -1
+ 406 0310               
+ 407 0310 150D0001	        bne     $t0, $t5, getNeighborsUg
+ 408 0314 01104020	        add     $t0, $t0, $s0
+ 409 0318               getNeighborsUg:
+ 410 0318 01100018	        mul     $t2, $t0, $s0   # boardSize * row
+     031c 00005012
+ 411 0320 01495020	        add     $t2, $t2, $t1   # boardSize * row + col
+ 412 0324 01545020	        add     $t2, $t2, $s4   # boardSize * row + col + arrayP address
+ 413 0328 914A0000	        lbu     $t2, 0($t2)     # get char at $t2, throw away $t2
+ 414 032c               
+ 415 032c 340B0041	        li      $t3, 65         # holds 'A'
+ 416 0330 340C0042	        li      $t4, 66         # holds 'B'
+ 417 0334               
+ 418 0334 114B0002	        beq     $t2, $t3, getNeighborsUgA
+ 419 0338 114C0003	        beq     $t2, $t4, getNeighborsUgB
+ 420 033c 080000D4	        j       getNeighborsUgS
+ 421 0340               
+ 422 0340               getNeighborsUgA:
+ 423 0340 22D60001	        addi    $s6, $s6, 1     # add 1 to A_neighbor count
+ 424 0344 080000D4	        j       getNeighborsUgS
+ 425 0348               getNeighborsUgB:
+ 426 0348 22F70001	        addi    $s7, $s7, 1     # add 1 to B_neighbor count
+ 427 034c 080000D4	        j       getNeighborsUgS
+ 428 0350               getNeighborsUgS:
+ 429 0350               
+ 430 0350               
+ 431 0350                       # down
+ 432 0350 22280001	        addi    $t0, $s1, 1     # row+1
+ 433 0354 22490000	        addi    $t1, $s2, 0     # col+0
+ 434 0358 340A0000	        li      $t2, 0          # position in array (calculated later)
+ 435 035c 240DFFFF	        li      $t5, -1         # load -1
+ 436 0360               
+ 437 0360 15100001	        bne     $t0, $s0, getNeighborsDg
+ 438 0364 01104022	        sub     $t0, $t0, $s0
+ 439 0368               getNeighborsDg:
+ 440 0368 01100018	        mul     $t2, $t0, $s0   # boardSize * row
+     036c 00005012
+ 441 0370 01495020	        add     $t2, $t2, $t1   # boardSize * row + col
+ 442 0374 01545020	        add     $t2, $t2, $s4   # boardSize * row + col + arrayP address
+ 443 0378 914A0000	        lbu     $t2, 0($t2)     # get char at $t2, throw away $t2
+ 444 037c               
+ 445 037c 340B0041	        li      $t3, 65         # holds 'A'
+ 446 0380 340C0042	        li      $t4, 66         # holds 'B'
+ 447 0384               
+ 448 0384 114B0002	        beq     $t2, $t3, getNeighborsDgA
+ 449 0388 114C0003	        beq     $t2, $t4, getNeighborsDgB
+ 450 038c 080000E8	        j       getNeighborsDgS
+ 451 0390               
+ 452 0390               getNeighborsDgA:
+ 453 0390 22D60001	        addi    $s6, $s6, 1     # add 1 to A_neighbor count
+ 454 0394 080000E8	        j       getNeighborsDgS
+ 455 0398               getNeighborsDgB:
+ 456 0398 22F70001	        addi    $s7, $s7, 1     # add 1 to B_neighbor count
+ 457 039c 080000E8	        j       getNeighborsDgS
+ 458 03a0               getNeighborsDgS:
+ 459 03a0               
+ 460 03a0               
+ 461 03a0                       # right up
+ 462 03a0 2228FFFF	        addi    $t0, $s1, -1    # row-1
+ 463 03a4 22490001	        addi    $t1, $s2, 1     # col+1
+ 464 03a8 340A0000	        li      $t2, 0          # position in array (calculated later)
+ 465 03ac 240DFFFF	        li      $t5, -1         # load -1
+ 466 03b0               
+ 467 03b0 150D0001	        bne     $t0, $t5, getNeighborsRUg
+ 468 03b4 01104020	        add     $t0, $t0, $s0
+ 469 03b8               getNeighborsRUg:
+ 470 03b8 15300001	        bne     $t1, $s0, getNeighborsRUg2
+ 471 03bc 01304822	        sub     $t1, $t1, $s0
+ 472 03c0               getNeighborsRUg2:
+ 473 03c0 01100018	        mul     $t2, $t0, $s0   # boardSize * row
+     03c4 00005012
+ 474 03c8 01495020	        add     $t2, $t2, $t1   # boardSize * row + col
+ 475 03cc 01545020	        add     $t2, $t2, $s4   # boardSize * row + col + arrayP address
+ 476 03d0 914A0000	        lbu     $t2, 0($t2)     # get char at $t2, throw away $t2
+ 477 03d4               
+ 478 03d4 340B0041	        li      $t3, 65         # holds 'A'
+ 479 03d8 340C0042	        li      $t4, 66         # holds 'B'
+ 480 03dc               
+ 481 03dc 114B0002	        beq     $t2, $t3, getNeighborsRUgA
+ 482 03e0 114C0003	        beq     $t2, $t4, getNeighborsRUgB
+ 483 03e4 080000FE	        j       getNeighborsRUgS
+ 484 03e8               
+ 485 03e8               getNeighborsRUgA:
+ 486 03e8 22D60001	        addi    $s6, $s6, 1     # add 1 to A_neighbor count
+ 487 03ec 080000FE	        j       getNeighborsRUgS
+ 488 03f0               getNeighborsRUgB:
+ 489 03f0 22F70001	        addi    $s7, $s7, 1     # add 1 to B_neighbor count
+ 490 03f4 080000FE	        j       getNeighborsRUgS
+ 491 03f8               getNeighborsRUgS:
+ 492 03f8               
+ 493 03f8               
+ 494 03f8                       # left up
+ 495 03f8 2228FFFF	        addi    $t0, $s1, -1    # row-1
+ 496 03fc 2249FFFF	        addi    $t1, $s2, -1    # col-1
+ 497 0400 340A0000	        li      $t2, 0          # position in array (calculated later)
+ 498 0404 240DFFFF	        li      $t5, -1         # load -1
+ 499 0408               
+ 500 0408 150D0001	        bne     $t0, $t5, getNeighborsLUg
+ 501 040c 01104020	        add     $t0, $t0, $s0
+ 502 0410               getNeighborsLUg:
+ 503 0410 152D0001	        bne     $t1, $t5, getNeighborsLUg2
+ 504 0414 01304820	        add     $t1, $t1, $s0
+ 505 0418               getNeighborsLUg2:
+ 506 0418 01100018	        mul     $t2, $t0, $s0   # boardSize * row
+     041c 00005012
+ 507 0420 01495020	        add     $t2, $t2, $t1   # boardSize * row + col
+ 508 0424 01545020	        add     $t2, $t2, $s4   # boardSize * row + col + arrayP address
+ 509 0428 914A0000	        lbu     $t2, 0($t2)     # get char at $t2, throw away $t2
+ 510 042c               
+ 511 042c 340B0041	        li      $t3, 65         # holds 'A'
+ 512 0430 340C0042	        li      $t4, 66         # holds 'B'
+ 513 0434               
+ 514 0434 114B0002	        beq     $t2, $t3, getNeighborsLUgA
+ 515 0438 114C0003	        beq     $t2, $t4, getNeighborsLUgB
+ 516 043c 08000114	        j       getNeighborsLUgS
+ 517 0440               
+ 518 0440               getNeighborsLUgA:
+ 519 0440 22D60001	        addi    $s6, $s6, 1     # add 1 to A_neighbor count
+ 520 0444 08000114	        j       getNeighborsLUgS
+ 521 0448               getNeighborsLUgB:
+ 522 0448 22F70001	        addi    $s7, $s7, 1     # add 1 to B_neighbor count
+ 523 044c 08000114	        j       getNeighborsLUgS
+ 524 0450               getNeighborsLUgS:
+ 525 0450               
+ 526 0450               
+ 527 0450                       # right down
+ 528 0450 22280001	        addi    $t0, $s1, 1     # row+1
+ 529 0454 22490001	        addi    $t1, $s2, 1     # col+1
+ 530 0458 340A0000	        li      $t2, 0          # position in array (calculated later)
+ 531 045c 240DFFFF	        li      $t5, -1         # load -1
+ 532 0460               
+ 533 0460 15100001	        bne     $t0, $s0, getNeighborsRDg
+ 534 0464 01104022	        sub     $t0, $t0, $s0
+ 535 0468               getNeighborsRDg:
+ 536 0468 15300001	        bne     $t1, $s0, getNeighborsRDg2
+ 537 046c 01304822	        sub     $t1, $t1, $s0
+ 538 0470               getNeighborsRDg2:
+ 539 0470 01100018	        mul     $t2, $t0, $s0   # boardSize * row
+     0474 00005012
+ 540 0478 01495020	        add     $t2, $t2, $t1   # boardSize * row + col
+ 541 047c 01545020	        add     $t2, $t2, $s4   # boardSize * row + col + arrayP address
+ 542 0480 914A0000	        lbu     $t2, 0($t2)     # get char at $t2, throw away $t2
+ 543 0484               
+ 544 0484 340B0041	        li      $t3, 65         # holds 'A'
+ 545 0488 340C0042	        li      $t4, 66         # holds 'B'
+ 546 048c               
+ 547 048c 114B0002	        beq     $t2, $t3, getNeighborsRDgA
+ 548 0490 114C0003	        beq     $t2, $t4, getNeighborsRDgB
+ 549 0494 0800012A	        j       getNeighborsRDgS
+ 550 0498               
+ 551 0498               getNeighborsRDgA:
+ 552 0498 22D60001	        addi    $s6, $s6, 1     # add 1 to A_neighbor count
+ 553 049c 0800012A	        j       getNeighborsRDgS
+ 554 04a0               getNeighborsRDgB:
+ 555 04a0 22F70001	        addi    $s7, $s7, 1     # add 1 to B_neighbor count
+ 556 04a4 0800012A	        j       getNeighborsRDgS
+ 557 04a8               getNeighborsRDgS:
+ 558 04a8               
+ 559 04a8               
+ 560 04a8                       # left down
+ 561 04a8 22280001	        addi    $t0, $s1, 1     # row+0
+ 562 04ac 2249FFFF	        addi    $t1, $s2, -1    # col-1
+ 563 04b0 340A0000	        li      $t2, 0          # position in array (calculated later)
+ 564 04b4 240DFFFF	        li      $t5, -1         # load -1
+ 565 04b8               
+ 566 04b8 15100001	        bne     $t0, $s0, getNeighborsLDg
+ 567 04bc 01104022	        sub     $t0, $t0, $s0
+ 568 04c0               getNeighborsLDg:
+ 569 04c0 152D0001	        bne     $t1, $t5, getNeighborsLDg2
+ 570 04c4 01304820	        add     $t1, $t1, $s0
+ 571 04c8               getNeighborsLDg2:
+ 572 04c8 01100018	        mul     $t2, $t0, $s0   # boardSize * row
+     04cc 00005012
+ 573 04d0 01495020	        add     $t2, $t2, $t1   # boardSize * row + col
+ 574 04d4 01545020	        add     $t2, $t2, $s4   # boardSize * row + col + arrayP address
+ 575 04d8 914A0000	        lbu     $t2, 0($t2)     # get char at $t2, throw away $t2
+ 576 04dc               
+ 577 04dc 340B0041	        li      $t3, 65         # holds 'A'
+ 578 04e0 340C0042	        li      $t4, 66         # holds 'B'
+ 579 04e4               
+ 580 04e4 114B0002	        beq     $t2, $t3, getNeighborsLDgA
+ 581 04e8 114C0003	        beq     $t2, $t4, getNeighborsLDgB
+ 582 04ec 08000140	        j       getNeighborsLDgS
+ 583 04f0               
+ 584 04f0               getNeighborsLDgA:
+ 585 04f0 22D60001	        addi    $s6, $s6, 1     # add 1 to A_neighbor count
+ 586 04f4 08000140	        j       getNeighborsLDgS
+ 587 04f8               getNeighborsLDgB:
+ 588 04f8 22F70001	        addi    $s7, $s7, 1     # add 1 to B_neighbor count
+ 589 04fc 08000140	        j       getNeighborsLDgS
+ 590 0500               getNeighborsLDgS:
+ 591 0500               
+ 592 0500 8FBF0004	        lw      $ra, -4+A_FRAMESIZE_8($sp)
+ 593 0504 23BD0008	        addi    $sp, $sp, A_FRAMESIZE_8
+ 594 0508               
+ 595 0508 03E00008	        jr      $ra
+ 596 050c               
+ 597 050c               
+ 598 050c               updateBoardM:
+ 599 050c 23BDFFF8	        addi    $sp, $sp, -A_FRAMESIZE_8
+ 600 0510 AFBF0004	        sw      $ra, -4+A_FRAMESIZE_8($sp)
+ 601 0514               
+ 602 0514               
+ 603 0514               updateBoardMHelp:
+ 604 0514                       #lbu     $s6, 0($s4)
+ 605 0514                       #move    $a0, $s6
+ 606 0514                       
+ 607 0514 34160000	        li      $s6, 0          # reset A_neighbors
+ 608 0518 34170000	        li      $s7, 0          # reset B_neighbors
+ 609 051c               
+ 610 051c               
+ 611 051c 0C000096	        jal     getNeighbors
+ 612 0520               
+ 613 0520                                               # s0 is boardSize
+ 614 0520                                               # s1 is row
+ 615 0520                                               # s2 is col
+ 616 0520                                               # s4 is arrayP
+ 617 0520                                               # s5 is arrayS
+ 618 0520 02110018	        mul     $t0, $s0, $s1   # boardSize * row
+     0524 00004012
+ 619 0528 01124020	        add     $t0, $t0, $s2   # boardSize * row + col
+ 620 052c 01144820	        add     $t1, $t0, $s4   # " " + load from address (arrayP)
+ 621 0530 01155020	        add     $t2, $t0, $s5   # " " + write to address  (arrayS)
+ 622 0534 91290000	        lbu     $t1, 0($t1)
+ 623 0538                       
+ 624 0538               
+ 625 0538 340B0041	        li      $t3, 65         # holds 'A'
+ 626 053c 112B0003	        beq     $t1, $t3, updateBoardMfocA
+ 627 0540 340B0042	        li      $t3, 66         # holds 'B'
+ 628 0544 112B0011	        beq     $t1, $t3, updateBoardMfocB
+ 629 0548 08000173	        j       updateBoardMfocS
+ 630 054c               
+ 631 054c               
+ 632 054c               
+ 633 054c               updateBoardMfocA:
+ 634 054c 02D76022	        sub     $t4, $s6, $s7   # A-B (focus on A)
+ 635 0550 340D0002	        li      $t5, 2          # $t5 is 1
+ 636 0554 018D702A	        slt     $t6, $t4, $t5   # if $t4 < $t5, $t6 is 1
+ 637 0558                                               # if $t4 < $t5, goto updateBoardMfocAkill
+ 638 0558               
+ 639 0558 340F0001	        li      $t7, 1
+ 640 055c 11CF0005	        beq     $t6, $t7, updateBoardMfocAkill
+ 641 0560               
+ 642 0560 340D0002	        li      $t5, 2          # compare A-neighbors to 2
+ 643 0564 11AC0006	        beq     $t5, $t4, updateBoardMfocAlive
+ 644 0568 340D0003	        li      $t5, 3          # compare A-neighbors to 3
+ 645 056c 11AC0004	        beq     $t5, $t4, updateBoardMfocAlive
+ 646 0570               
+ 647 0570 0800015D	        j       updateBoardMfocAkill
+ 648 0574               
+ 649 0574               updateBoardMfocAkill:
+ 650 0574 340B0020	        li      $t3, 32         # holds ' '
+ 651 0578 A14B0000	        sb      $t3, 0($t2)     # store ' ' in arrayS
+ 652 057c 0800017B	        j       updateBoardMHelpD
+ 653 0580               
+ 654 0580               updateBoardMfocAlive:
+ 655 0580 340B0041	        li      $t3, 65         # holds 'A'
+ 656 0584 A14B0000	        sb      $t3, 0($t2)     # store 'A' in arrayS
+ 657 0588 0800017B	        j       updateBoardMHelpD
+ 658 058c               
+ 659 058c               updateBoardMfocB:
+ 660 058c 02F66022	        sub     $t4, $s7, $s6   # B-A (focus on B)
+ 661 0590 340D0002	        li      $t5, 2          # $t5 is 1
+ 662 0594 018D702A	        slt     $t6, $t4, $t5   # if $t4 < $t5, $t6 is 1
+ 663 0598                                               # if $t4 < $t5, goto updateBoardMfocBkill
+ 664 0598 340F0001	        li      $t7, 1
+ 665 059c 11CF0005	        beq     $t6, $t7, updateBoardMfocBkill
+ 666 05a0               
+ 667 05a0 340D0002	        li      $t5, 2          # compare B-neighbors to 2
+ 668 05a4 11AC0006	        beq     $t5, $t4, updateBoardMfocBlive
+ 669 05a8 340D0003	        li      $t5, 3          # compare B-neighbors to 2
+ 670 05ac 11AC0004	        beq     $t5, $t4, updateBoardMfocBlive
+ 671 05b0               
+ 672 05b0 0800016D	        j       updateBoardMfocBkill
+ 673 05b4               
+ 674 05b4               updateBoardMfocBkill:
+ 675 05b4 340B0020	        li      $t3, 32         # holds ' '
+ 676 05b8 A14B0000	        sb      $t3, 0($t2)     # store 'A' in arrayS
+ 677 05bc 0800017B	        j       updateBoardMHelpD
+ 678 05c0               
+ 679 05c0               updateBoardMfocBlive:
+ 680 05c0 340B0042	        li      $t3, 66         # holds 'B'
+ 681 05c4 A14B0000	        sb      $t3, 0($t2)     # store 'B' in arrayS
+ 682 05c8 0800017B	        j       updateBoardMHelpD
+ 683 05cc               
+ 684 05cc               updateBoardMfocS:
+ 685 05cc 02D76022	        sub     $t4, $s6, $s7   # A-B (focus on Space)
+ 686 05d0 340D0003	        li      $t5, 3          # load 3 to compare neighbors
+ 687 05d4 118DFFEA	        beq     $t4, $t5, updateBoardMfocAlive
+ 688 05d8 02F66022	        sub     $t4, $s7, $s6   # B-A
+ 689 05dc 118DFFF8	        beq     $t4, $t5, updateBoardMfocBlive
+ 690 05e0               
+ 691 05e0 340B0020	        li      $t3, 32         # holds ' '
+ 692 05e4 A14B0000	        sb      $t3, 0($t2)     # store ' ' in arrayS
+ 693 05e8 0800017B	        j       updateBoardMHelpD
+ 694 05ec               
+ 695 05ec               
+ 696 05ec               
+ 697 05ec               updateBoardMHelpD:
+ 698 05ec                       
+ 699 05ec 34160000	        li      $s6, 0          # reset A_neighbors - Free var
+ 700 05f0 34170000	        li      $s7, 0          # reset B_neighbors - Free var
+ 701 05f4               
+ 702 05f4                       
+ 703 05f4               
+ 704 05f4               
+ 705 05f4 3C010000	        lw      $s2, updateBoardcol
+     05f8 8C320000
+ 706 05fc 22520001	        addi    $s2, $s2, 1     # col + 1
+ 707 0600 3C010000	        sw      $s2, updateBoardcol
+     0604 AC320000
+ 708 0608               
+ 709 0608               
+ 710 0608 1612FFC2	        bne     $s0, $s2, updateBoardMHelp
+ 711 060c               
+ 712 060c 8FBF0004	        lw      $ra, -4+A_FRAMESIZE_8($sp)
+ 713 0610 23BD0008	        addi    $sp, $sp, A_FRAMESIZE_8
+ 714 0614               
+ 715 0614 03E00008	        jr      $ra
+ 716 0618               
+ 717 0618               
+ 718 0618               updateBoardS:
+ 719 0618 23BDFFF8	        addi    $sp, $sp, -A_FRAMESIZE_8
+ 720 061c AFBF0004	        sw      $ra, -4+A_FRAMESIZE_8($sp)
+ 721 0620                   
+ 722 0620               updateBoardSHelp:
+ 723 0620 00009021	        move    $s2, $zero      # counts col number (iterator)
+ 724 0624                                               # protects this value
+ 725 0624 3C010000	        sw      $s2, updateBoardcol
+     0628 AC320000
+ 726 062c               
+ 727 062c 0C000143	        jal     updateBoardM
+ 728 0630               
+ 729 0630 22310001	        addi    $s1, $s1, 1
+ 730 0634 1611FFFA	        bne     $s0, $s1, updateBoardSHelp
+ 731 0638               
+ 732 0638 8FBF0004	        lw      $ra, -4+A_FRAMESIZE_8($sp)
+ 733 063c 23BD0008	        addi    $sp, $sp, A_FRAMESIZE_8
+ 734 0640               
+ 735 0640 03E00008	        jr      $ra
+ 736 0644               
+ 737 0644               
+ 738 0644               
+ 739 0644               updateBoard:
+ 740 0644 23BDFFD8	        addi    $sp, $sp, -A_FRAMESIZE_40
+ 741 0648 AFBF0024	        sw      $ra, -4+A_FRAMESIZE_40($sp)
+ 742 064c AFB7001C	        sw      $s7, 28($sp)
+ 743 0650 AFB60018	        sw      $s6, 24($sp)
+ 744 0654 AFB50014	        sw      $s5, 20($sp)
+ 745 0658 AFB40010	        sw      $s4, 16($sp)
+ 746 065c AFB3000C	        sw      $s3, 12($sp)
+ 747 0660 AFB20008	        sw      $s2, 8($sp)
+ 748 0664 AFB10004	        sw      $s1, 4($sp)
+ 749 0668 AFB00000	        sw      $s0, 0($sp)
+ 750 066c               
+ 751 066c 3C010000	        lw      $s0, boardSize  # boardSize
+     0670 8C300000
+ 752 0674 34110000	        li      $s1, 0          # row
+ 753 0678 34120000	        li      $s2, 0          # col
+ 754 067c 34130000	        li      $s3, 0          # boardSize*row + col
+ 755 0680               
+ 756 0680 3C140000	        la      $s4, arrayP     # primary array
+     0684 36940000
+ 757 0688 3C150000	        la      $s5, arrayS     # scrap array
+     068c 36B50000
+ 758 0690                       
+ 759 0690               
+ 760 0690               
+ 761 0690 0C000186	        jal     updateBoardS    # update to arrayS
+ 762 0694 0C000073	        jal     copyStP         # move arrayS data to arrayP
+ 763 0698               
+ 764 0698               
+ 765 0698               
+ 766 0698               
+ 767 0698 8FBF0024	        lw      $ra, -4+A_FRAMESIZE_40($sp)
+ 768 069c 8FB7001C	        lw      $s7, 28($sp)
+ 769 06a0 8FB60018	        lw      $s6, 24($sp)
+ 770 06a4 8FB50014	        lw      $s5, 20($sp)
+ 771 06a8 8FB40010	        lw      $s4, 16($sp)
+ 772 06ac 8FB3000C	        lw      $s3, 12($sp)
+ 773 06b0 8FB20008	        lw      $s2, 8($sp)
+ 774 06b4 8FB10004	        lw      $s1, 4($sp)
+ 775 06b8 8FB00000	        lw      $s0, 0($sp)
+ 776 06bc 23BD0028	        addi    $sp, $sp, A_FRAMESIZE_40
+ 777 06c0 03E00008	        jr      $ra
+ 778 06c4               
+ 779 06c4               
+ 780 06c4               
+ 781 06c4               
+ 782 06c4               
+ 783 06c4               
+ 784 06c4               #
+ 785 06c4               # Name:         main
+ 786 06c4               #
+ 787 06c4               # Description:  EXECUTION BEGINS HERE
+ 788 06c4               # Arguments:    none
+ 789 06c4               # Returns:      none
+ 790 06c4               #
+ 791 06c4               main:
+ 792 06c4 23BDFFF8	        addi    $sp, $sp, -A_FRAMESIZE_8
+ 793 06c8 AFBF0004	        sw      $ra, -4+A_FRAMESIZE_8($sp)
+ 794 06cc               
+ 795 06cc 34020004	        li      $v0, 4          # print intro text
+ 796 06d0 3C040000	        la      $a0, sText1
+     06d4 34840000
+ 797 06d8 0000000C	        syscall
+ 798 06dc               
+ 799 06dc 34020004	        li      $v0, 4
+ 800 06e0 3C040000	        la      $a0, sText2
+     06e4 34840000
+ 801 06e8 0000000C	        syscall
+ 802 06ec               
+ 803 06ec 34020004	        li      $v0, 4
+ 804 06f0 3C040000	        la      $a0, sText3
+     06f4 34840000
+ 805 06f8 0000000C	        syscall                 # end of intro text
+ 806 06fc                       
+ 807 06fc                                               # prompt user for board size
+ 808 06fc 34020004	        li      $v0, 4
+ 809 0700 3C040000	        la      $a0, pText1
+     0704 34840000
+ 810 0708 0000000C	        syscall
+ 811 070c               
+ 812 070c               mainpText1b:
+ 813 070c 0C000000	        jal     getInput        # get the board size from user input
+ 814 0710               
+ 815 0710               
+ 816 0710 00408021	        move    $s0, $v0        # store board size in $s0
+ 817 0714                       
+ 818 0714                                               # comparing data result to min
+ 819 0714 20080004	        addi    $t0, $zero, 4   # set constant 4 in $t0
+ 820 0718 0208482A	        slt     $t1, $s0, $t0   # if board size < 4,   $t1 = 1
+ 821 071c                                               # if user input is < 4, $t1 = 1, error
+ 822 071c               
+ 823 071c 200A0001	        addi    $t2, $zero, 1   # set constant 1 in $t2
+ 824 0720 112A0004	        beq     $t1, $t2, mainpText1err
+ 825 0724               
+ 826 0724                                               # comparing data result to max
+ 827 0724 2008001E	        addi    $t0, $zero, 30  # set constant 30 in $t0
+ 828 0728 0110482A	        slt     $t1, $t0, $s0   # if 20 < board size,   $t1 = 1 (this is err)
+ 829 072c                                               # no need for constant
+ 830 072c                                               # jump out if 4 <= data <= 20
+ 831 072c 11200006	        beq     $t1, $zero, mainpText2a
+ 832 0730 080001CD	        j       mainpText1err   # board size > 20, error
+ 833 0734               
+ 834 0734               mainpText1err:                  # prompt user with board size ERROR
+ 835 0734 34020004	        li      $v0, PRINT_STRING
+ 836 0738 3C040000	        la      $a0, p1Warn
+     073c 34840000
+ 837 0740 0000000C	        syscall
+ 838 0744               
+ 839 0744 080001C3	        j       mainpText1b
+ 840 0748               
+ 841 0748               
+ 842 0748               mainpText2a:                    # we now prompt and gather second user input
+ 843 0748 3C010000	        sw      $s0, boardSize  # we need to save user input to a global
+     074c AC300000
+ 844 0750                                               #  variable so it can be used later
+ 845 0750                                               # store in boardSize
+ 846 0750               
+ 847 0750                                               # prompt user for num of generations to run
+ 848 0750 34020004	        li      $v0, PRINT_STRING
+ 849 0754 3C040000	        la      $a0, pText2
+     0758 34840000
+ 850 075c 0000000C	        syscall
+ 851 0760               
+ 852 0760               mainpText2b:
+ 853 0760 0C000000	        jal     getInput        # get the generations to run from user input
+ 854 0764                       
+ 855 0764               
+ 856 0764 00408821	        move    $s1, $v0        # store generations to run in $s1
+ 857 0768               
+ 858 0768                                               # comparing data result to min
+ 859 0768 20080000	        addi    $t0, $zero, 0   # set constant 0 in $t0
+ 860 076c 0228482A	        slt     $t1, $s1, $t0   # if board size < 4,   $t1 = 1
+ 861 0770                                               # if user input is < 4, $t1 = 1, error
+ 862 0770               
+ 863 0770 200A0001	        addi    $t2, $zero, 1   # set constant 1 in $t2
+ 864 0774 112A0004	        beq     $t1, $t2, mainpText2err
+ 865 0778               
+ 866 0778                                               # comparing data result to max
+ 867 0778 20080014	        addi    $t0, $zero, 20  # set constant 20 in $t0
+ 868 077c 0111482A	        slt     $t1, $t0, $s1   # if 20 < board size,   $t1 = 1 (this is err)
+ 869 0780                                               # no need for constant
+ 870 0780                                               # jump out if 4 <= data <= 20
+ 871 0780 11200006	        beq     $t1, $zero, mainpText3a
+ 872 0784 080001E2	        j       mainpText2err   # board size > 20, error
+ 873 0788               
+ 874 0788               mainpText2err:                  # prompt user with board size ERROR
+ 875 0788               
+ 876 0788 34020004	        li      $v0, PRINT_STRING
+ 877 078c 3C040000	        la      $a0, p2Warn
+     0790 34840000
+ 878 0794 0000000C	        syscall
+ 879 0798               
+ 880 0798 080001D8	        j       mainpText2b
+ 881 079c               
+ 882 079c               mainpText3a:
+ 883 079c                                               # we now prompt and gather third user input
+ 884 079c                                               #
+ 885 079c                                               # $s2 holds number of squares on the board
+ 886 079c                                               ##############################################
+ 887 079c                                               # we need to save user input to a global
+ 888 079c                                               #  variable so it can be used later
+ 889 079c 3C010000	        sw      $s1, genToRun   # store in genToRun
+     07a0 AC310000
+ 890 07a4                                               # initialize generation counter
+ 891 07a4 3C010000	        sw      $zero, generation
+     07a8 AC200000
+ 892 07ac               
+ 893 07ac                                               # prompt user for num of generations to run
+ 894 07ac 34020004	        li      $v0, PRINT_STRING
+ 895 07b0 3C040000	        la      $a0, pText3
+     07b4 34840000
+ 896 07b8 0000000C	        syscall
+ 897 07bc               
+ 898 07bc 02100018	        mul     $s2, $s0, $s0   # $s2 holds number of squares on the board
+     07c0 00009012
+ 899 07c4               
+ 900 07c4               mainpText3b:
+ 901 07c4                                               
+ 902 07c4                                               ##############################################
+ 903 07c4                                               # s3 will hold numAlive_A
+ 904 07c4               
+ 905 07c4                       
+ 906 07c4               
+ 907 07c4 0C000000	        jal     getInput        # get numAlive_A from user (0 <= nA_A <= $s2)
+ 908 07c8               
+ 909 07c8 00409821	        move    $s3, $v0        # store numAlive_A in $s3
+ 910 07cc               
+ 911 07cc                                               # comparing data result to min
+ 912 07cc 20080000	        addi    $t0, $zero, 0   # set constant 0 in $t0
+ 913 07d0 0268482A	        slt     $t1, $s3, $t0   # if board size < 4,   $t1 = 1
+ 914 07d4                                               # if user input is < 4, $t1 = 1, error
+ 915 07d4               
+ 916 07d4 200A0001	        addi    $t2, $zero, 1   # set constant 1 in $t2
+ 917 07d8 112A0004	        beq     $t1, $t2, mainpText3err
+ 918 07dc               
+ 919 07dc                                               # comparing data result to max
+ 920 07dc 00124020	        add     $t0, $zero, $s2 # set constant boardSize^2 in $t0
+ 921 07e0 0113482A	        slt     $t1, $t0, $s3   # if 20 < board size,   $t1 = 1 (this is err)
+ 922 07e4                                               # no need for constant
+ 923 07e4                                               # jump out if 4 <= data <= 20
+ 924 07e4 11200006	        beq     $t1, $zero, mainpText4a
+ 925 07e8 080001FB	        j       mainpText3err   # board size > 20, error
+ 926 07ec               
+ 927 07ec               mainpText3err:
+ 928 07ec               
+ 929 07ec                                                       # prompt user with board size ERROR
+ 930 07ec 34020004	        li      $v0, PRINT_STRING
+ 931 07f0 3C040000	        la      $a0, p3Warn
+     07f4 34840000
+ 932 07f8 0000000C	        syscall
+ 933 07fc               
+ 934 07fc 080001F1	        j       mainpText3b
+ 935 0800               
+ 936 0800               
+ 937 0800               mainpText4a:
+ 938 0800                                               ##############################################
+ 939 0800                                               # we now initialize both arrays
+ 940 0800 3C140000	        la      $s4, arrayP     # $s4 temp array address holder
+     0804 36940000
+ 941 0808 0280A821	        move    $s5, $s4        # $s5 temp array location holder
+ 942 080c 3C160000	        la      $s6, arrayP     # $s6 temp array address holder
+     0810 36D60000
+ 943 0814 02C0B821	        move    $s7, $s6        # $s7 temp array location holder
+ 944 0818 20080000	        addi    $t0, $zero, 0   # $t0 temp index, comparing to $s2
+ 945 081c               
+ 946 081c 34090020	        li      $t1, 32
+ 947 0820               
+ 948 0820                                               # prompt user for locations
+ 949 0820 34020004	        li      $v0, PRINT_STRING
+ 950 0824 3C040000	        la      $a0, pText4
+     0828 34840000
+ 951 082c 0000000C	        syscall
+ 952 0830               
+ 953 0830               mainpText4loop:                 # only mainpText4 needs to initialize arrays
+ 954 0830 11120006	        beq     $t0, $s2, mainpText4bPre
+ 955 0834               
+ 956 0834 A2A90000	        sb      $t1, 0($s5)
+ 957 0838 A2E90000	        sb      $t1, 0($s7)
+ 958 083c               
+ 959 083c 22B50001	        addi    $s5, $s5, 1
+ 960 0840 22F70001	        addi    $s7, $s7, 1
+ 961 0844 21080001	        addi    $t0, $t0, 1
+ 962 0848 0800020C	        j       mainpText4loop
+ 963 084c               
+ 964 084c               
+ 965 084c               
+ 966 084c               mainpText4bPre:
+ 967 084c                                               # throw array $s6 $s7
+ 968 084c                                               # grab locations from users
+ 969 084c                                               #  throw out out of bounds locations
+ 970 084c               
+ 971 084c 34160000	        li      $s6, 0          # erase $s6
+ 972 0850 34170000	        li      $s7, 0          # erase $s7
+ 973 0854               
+ 974 0854               mainpText4b:
+ 975 0854 1260001F	        beq     $s3, $zero, mainpText5a
+ 976 0858                                               # check how many locs. are left to be placed
+ 977 0858               
+ 978 0858               
+ 979 0858 0C000000	        jal     getInput        # get row from user (0 <= nA_A <= $s2)
+ 980 085c               
+ 981 085c 0040B021	        move    $s6, $v0        # store row in $s6
+ 982 0860               
+ 983 0860                                               # comparing data result to min
+ 984 0860 20080000	        addi    $t0, $zero, 0   # set constant 0 in $t0
+ 985 0864 02C8482A	        slt     $t1, $s6, $t0   # if row < 0,   $t1 = 1
+ 986 0868               
+ 987 0868 200A0001	        addi    $t2, $zero, 1   # set constant 1 in $t2
+ 988 086c 112A0014	        beq     $t1, $t2, mainpText4err
+ 989 0870               
+ 990 0870                                               # comparing data result to max
+ 991 0870 220BFFFF	        addi    $t3, $s0, -1    # boardSize -1 to account for zero-indexing
+ 992 0874 0176482A	        slt     $t1, $t3, $s6   # if $s0 (boardSize) -1 < row, $t1 = 1 (err)
+ 993 0878                                               # jump out if 4 <= data <= 20
+ 994 0878                                               # row > $s0 (boardSize), error
+ 995 0878 112A0011	        beq     $t1, $t2, mainpText4err
+ 996 087c               
+ 997 087c               
+ 998 087c               
+ 999 087c 0C000000	        jal     getInput        # get col from user (0 <= nA_A <= $s2)
+1000 0880               
+1001 0880 0040B821	        move    $s7, $v0        # store col in $s7
+1002 0884               
+1003 0884                                               # comparing data result to min
+1004 0884 20080000	        addi    $t0, $zero, 0   # set constant 0 in $t0
+1005 0888 02E8482A	        slt     $t1, $s7, $t0   # if row < 0,   $t1 = 1
+1006 088c               
+1007 088c 200A0001	        addi    $t2, $zero, 1   # set constant 1 in $t2
+1008 0890 112A000B	        beq     $t1, $t2, mainpText4err
+1009 0894               
+1010 0894                                               # comparing data result to max
+1011 0894 220BFFFF	        addi    $t3, $s0, -1    # boardSize -1 to account for zero-indexing
+1012 0898 0177482A	        slt     $t1, $t3, $s7   # if $s0 (boardSize) < row, $t1 = 1 (err)
+1013 089c                                               # jump out if 4 <= data <= 20
+1014 089c                                               # row > $s0 (boardSize), error
+1015 089c 112A0008	        beq     $t1, $t2, mainpText4err
+1016 08a0               
+1017 08a0               
+1018 08a0                                               # NumCols * row + col
+1019 08a0 02160018	        mul     $s6, $s0, $s6   # NumCols * row
+     08a4 0000B012
+1020 08a8 02F6B020	        add     $s6, $s7, $s6   # + col
+1021 08ac 0296B020	        add     $s6, $s4, $s6   # add on memory address in matrix
+1022 08b0               
+1023 08b0 34080041	        li      $t0, 65         # ascii 'A'
+1024 08b4 A2C80000	        sb      $t0, 0($s6)     # store 'A' in array
+1025 08b8               
+1026 08b8 2273FFFF	        addi    $s3, $s3, -1    # decrease number of inputs to take in by one
+1027 08bc               
+1028 08bc 08000215	        j       mainpText4b     # loop, check at loop
+1029 08c0               
+1030 08c0               
+1031 08c0               
+1032 08c0               mainpText4err:
+1033 08c0                                               # prompt user, illegal point location
+1034 08c0 34020004	        li      $v0, PRINT_STRING
+1035 08c4 3C040000	        la      $a0, p4Warn
+     08c8 34840000
+1036 08cc 0000000C	        syscall
+1037 08d0               
+1038 08d0 08000215	        j       mainpText4b
+1039 08d4               
+1040 08d4               
+1041 08d4               
+1042 08d4               mainpText5a:
+1043 08d4                                               # prompt user for num of generations to run
+1044 08d4 34020004	        li      $v0, PRINT_STRING
+1045 08d8 3C040000	        la      $a0, pText5
+     08dc 34840000
+1046 08e0 0000000C	        syscall
+1047 08e4               
+1048 08e4               mainpText5b: 
+1049 08e4                                               ##############################################
+1050 08e4                                               # s3 will hold numAlive_B
+1051 08e4               
+1052 08e4 0C000000	        jal     getInput        # get numAlive_B from user (0 <= nA_A <= $s2)
+1053 08e8               
+1054 08e8 00409821	        move    $s3, $v0        # store numAlive_B in $s3
+1055 08ec               
+1056 08ec                                               # comparing data result to min
+1057 08ec 20080000	        addi    $t0, $zero, 0   # set constant 0 in $t0
+1058 08f0 0268482A	        slt     $t1, $s3, $t0   # if board size < 4,   $t1 = 1
+1059 08f4                                               # if user input is < 4, $t1 = 1, error
+1060 08f4               
+1061 08f4 200A0001	        addi    $t2, $zero, 1   # set constant 1 in $t2
+1062 08f8 112A0004	        beq     $t1, $t2, mainpText5err
+1063 08fc               
+1064 08fc                                               # comparing data result to max
+1065 08fc 00124020	        add     $t0, $zero, $s2 # set constant boardSize^2 in $t0
+1066 0900 0113482A	        slt     $t1, $t0, $s3   # if 20 < board size,   $t1 = 1 (this is err)
+1067 0904                                               # no need for constant
+1068 0904                                               # jump out if 4 <= data <= 20
+1069 0904 11200006	        beq     $t1, $zero, mainpText6a
+1070 0908 08000243	        j       mainpText5err   # board size > 20, error
+1071 090c               
+1072 090c               mainpText5err:
+1073 090c               
+1074 090c                                                       # prompt user with board size ERROR
+1075 090c 34020004	        li      $v0, PRINT_STRING
+1076 0910 3C040000	        la      $a0, p3Warn
+     0914 34840000
+1077 0918 0000000C	        syscall
+1078 091c               
+1079 091c 08000239	        j       mainpText5b
+1080 0920               
+1081 0920               mainpText6a:
+1082 0920                                               # prompt user for locations
+1083 0920 34020004	        li      $v0, PRINT_STRING
+1084 0924 3C040000	        la      $a0, pText4
+     0928 34840000
+1085 092c 0000000C	        syscall
+1086 0930               
+1087 0930               mainpText6b:
+1088 0930 1260001F	        beq     $s3, $zero, mainProc1pre
+1089 0934                                               # check how many locs. are left to be placed
+1090 0934               
+1091 0934               
+1092 0934 0C000000	        jal     getInput        # get row from user (0 <= nA_A <= $s2)
+1093 0938               
+1094 0938 0040B021	        move    $s6, $v0        # store row in $s6
+1095 093c               
+1096 093c                                               # comparing data result to min
+1097 093c 20080000	        addi    $t0, $zero, 0   # set constant 0 in $t0
+1098 0940 02C8482A	        slt     $t1, $s6, $t0   # if row < 0,   $t1 = 1
+1099 0944               
+1100 0944 200A0001	        addi    $t2, $zero, 1   # set constant 1 in $t2
+1101 0948 112A0014	        beq     $t1, $t2, mainpText6err
+1102 094c               
+1103 094c                                               # comparing data result to max
+1104 094c 220BFFFF	        addi    $t3, $s0, -1    # boardSize -1 to account for zero-indexing
+1105 0950 0176482A	        slt     $t1, $t3, $s6   # if $s0 (boardSize) -1 < row, $t1 = 1 (err)
+1106 0954                                               # jump out if 4 <= data <= 20
+1107 0954                                               # row > $s0 (boardSize), error
+1108 0954 112A0011	        beq     $t1, $t2, mainpText6err
+1109 0958               
+1110 0958               
+1111 0958               
+1112 0958 0C000000	        jal     getInput        # get col from user (0 <= nA_A <= $s2)
+1113 095c               
+1114 095c 0040B821	        move    $s7, $v0        # store col in $s7
+1115 0960               
+1116 0960                                               # comparing data result to min
+1117 0960 20080000	        addi    $t0, $zero, 0   # set constant 0 in $t0
+1118 0964 02E8482A	        slt     $t1, $s7, $t0   # if row < 0,   $t1 = 1
+1119 0968               
+1120 0968 200A0001	        addi    $t2, $zero, 1   # set constant 1 in $t2
+1121 096c 112A000B	        beq     $t1, $t2, mainpText6err
+1122 0970               
+1123 0970                                               # comparing data result to max
+1124 0970 220BFFFF	        addi    $t3, $s0, -1    # boardSize -1 to account for zero-indexing
+1125 0974 0177482A	        slt     $t1, $t3, $s7   # if $s0 (boardSize) < row, $t1 = 1 (err)
+1126 0978                                               # jump out if 4 <= data <= 20
+1127 0978                                               # row > $s0 (boardSize), error
+1128 0978 112A0008	        beq     $t1, $t2, mainpText6err
+1129 097c               
+1130 097c               
+1131 097c                                               # NumCols * row + col
+1132 097c 02160018	        mul     $s6, $s0, $s6   # NumCols * row
+     0980 0000B012
+1133 0984 02F6B020	        add     $s6, $s7, $s6   # + col
+1134 0988 0296B020	        add     $s6, $s4, $s6   # add on memory address in matrix
+1135 098c               
+1136 098c 34080042	        li      $t0, 66         # ascii 'B'
+1137 0990 A2C80000	        sb      $t0, 0($s6)     # store 'B' in array
+1138 0994               
+1139 0994 2273FFFF	        addi    $s3, $s3, -1    # decrease number of inputs to take in by one
+1140 0998               
+1141 0998 0800024C	        j       mainpText6b     # loop, check at loop
+1142 099c               
+1143 099c               
+1144 099c               
+1145 099c               mainpText6err:
+1146 099c                                               # prompt user, illegal point location
+1147 099c 34020004	        li      $v0, PRINT_STRING
+1148 09a0 3C040000	        la      $a0, p4Warn
+     09a4 34840000
+1149 09a8 0000000C	        syscall
+1150 09ac               
+1151 09ac 0800024C	        j       mainpText6b
+1152 09b0               
+1153 09b0               
+1154 09b0               mainProc1pre:
+1155 09b0 0C000031	        jal     printBoard      # print the board regardless of # genToRun
+1156 09b4 0800026E	        j       mainProc1
+1157 09b8               
+1158 09b8               mainProc1:                      # code that iterates the simulation steps
+1159 09b8               
+1160 09b8                       
+1161 09b8                                               # if #genToRun is above 0, updateBoard
+1162 09b8 16200001	        bne     $s1, $zero, mainProc1uB
+1163 09bc 08000278	        j       mainProc1duB
+1164 09c0               
+1165 09c0               mainProc1uB:                    # update the board subfunction
+1166 09c0 0C000191	        jal     updateBoard
+1167 09c4               
+1168 09c4 2231FFFF	        addi    $s1, $s1, -1    # genToRun -1
+1169 09c8               
+1170 09c8 3C010000	        lw      $t9, generation # load generation number from memory
+     09cc 8C390000
+1171 09d0 23390001	        addi    $t9, $t9, 1     # increase generation number by one
+1172 09d4 3C010000	        sw      $t9, generation # store generation number back into memory
+     09d8 AC390000
+1173 09dc                       
+1174 09dc               
+1175 09dc 0C000031	        jal     printBoard      # print updated board
+1176 09e0               
+1177 09e0               mainProc1duB:                   # don't update the board
+1178 09e0 1620FFF5	        bne     $s1, $zero, mainProc1
+1179 09e4                       
+1180 09e4               
+1181 09e4               
+1182 09e4 8FBF0004	        lw      $ra, -4+A_FRAMESIZE_8($sp)
+1183 09e8 23BD0008	        addi    $sp, $sp, A_FRAMESIZE_8
+1184 09ec               
+1185 09ec 03E00008	        jr      $ra
+1186 09f0               
+
+
+A_FRAMESIZE_40        = 00000028   
+A_FRAMESIZE_8         = 00000008   
+PRINT_CHAR            = 0000000B   
+PRINT_INT             = 00000001   
+PRINT_STRING          = 00000004   
+arrayP                  00000000 R  data 
+arrayS                  00000384 R  data 
+boardSize               00000708 R  data 
+copyStP                 000001CC R  text 
+copyStPloop             00000218 R  text 
+dash                    00000722 R  data 
+debug                   00000726 R  data 
+debuga                  0000072D R  data 
+genToRun                0000070C R  data 
+generation              00000710 R  data 
+getInput                00000000 R  text 
+getNeighbors            00000258 R  text 
+getNeighborsDg          00000368 R  text 
+getNeighborsDgA         00000390 R  text 
+getNeighborsDgB         00000398 R  text 
+getNeighborsDgS         000003A0 R  text 
+getNeighborsLDg         000004C0 R  text 
+getNeighborsLDg2        000004C8 R  text 
+getNeighborsLDgA        000004F0 R  text 
+getNeighborsLDgB        000004F8 R  text 
+getNeighborsLDgS        00000500 R  text 
+getNeighborsLUg         00000410 R  text 
+getNeighborsLUg2        00000418 R  text 
+getNeighborsLUgA        00000440 R  text 
+getNeighborsLUgB        00000448 R  text 
+getNeighborsLUgS        00000450 R  text 
+getNeighborsLg          000002C8 R  text 
+getNeighborsLgA         000002F0 R  text 
+getNeighborsLgB         000002F8 R  text 
+getNeighborsLgS         00000300 R  text 
+getNeighborsRDg         00000468 R  text 
+getNeighborsRDg2        00000470 R  text 
+getNeighborsRDgA        00000498 R  text 
+getNeighborsRDgB        000004A0 R  text 
+getNeighborsRDgS        000004A8 R  text 
+getNeighborsRUg         000003B8 R  text 
+getNeighborsRUg2        000003C0 R  text 
+getNeighborsRUgA        000003E8 R  text 
+getNeighborsRUgB        000003F0 R  text 
+getNeighborsRUgS        000003F8 R  text 
+getNeighborsRg          00000278 R  text 
+getNeighborsRgA         000002A0 R  text 
+getNeighborsRgB         000002A8 R  text 
+getNeighborsRgS         000002B0 R  text 
+getNeighborsUg          00000318 R  text 
+getNeighborsUgA         00000340 R  text 
+getNeighborsUgB         00000348 R  text 
+getNeighborsUgS         00000350 R  text 
+iText1                  0000077D R  data 
+iText2                  00000792 R  data 
+lf                      0000071E R  data 
+main                    000006C4 RG text 
+mainProc1               000009B8 R  text 
+mainProc1duB            000009E0 R  text 
+mainProc1pre            000009B0 R  text 
+mainProc1uB             000009C0 R  text 
+mainpText1b             0000070C R  text 
+mainpText1err           00000734 R  text 
+mainpText2a             00000748 R  text 
+mainpText2b             00000760 R  text 
+mainpText2err           00000788 R  text 
+mainpText3a             0000079C R  text 
+mainpText3b             000007C4 R  text 
+mainpText3err           000007EC R  text 
+mainpText4a             00000800 R  text 
+mainpText4b             00000854 R  text 
+mainpText4bPre          0000084C R  text 
+mainpText4err           000008C0 R  text 
+mainpText4loop          00000830 R  text 
+mainpText5a             000008D4 R  text 
+mainpText5b             000008E4 R  text 
+mainpText5err           0000090C R  text 
+mainpText6a             00000920 R  text 
+mainpText6b             00000930 R  text 
+mainpText6err           0000099C R  text 
+p1Warn                  00000843 R  data 
+p2Warn                  0000086C R  data 
+p3Warn                  000008A0 R  data 
+p4Warn                  000008D3 R  data 
+pBoardT                 00000030 R  text 
+pText1                  0000079C R  data 
+pText2                  000007B0 R  data 
+pText3                  000007D5 R  data 
+pText4                  000007FF R  data 
+pText5                  00000819 R  data 
+pipe                    00000724 R  data 
+plus                    00000720 R  data 
+printBoard              000000C4 R  text 
+printChar               0000000C R  text 
+printNum                00000024 R  text 
+printRowM               0000004C R  text 
+printRowMHelp           00000064 R  text 
+printRowS               000000A0 R  text 
+printRowSHelp           000000A8 R  text 
+printString             00000018 R  text 
+sText1                  00000735 R  data 
+sText2                  0000074D R  data 
+sText3                  00000765 R  data 
+size                    00000718 R  data 
+space                   0000071C R  data 
+updateBoard             00000644 R  text 
+updateBoardM            0000050C R  text 
+updateBoardMHelp        00000514 R  text 
+updateBoardMHelpD       000005EC R  text 
+updateBoardMfocA        0000054C R  text 
+updateBoardMfocAkill    00000574 R  text 
+updateBoardMfocAlive    00000580 R  text 
+updateBoardMfocB        0000058C R  text 
+updateBoardMfocBkill    000005B4 R  text 
+updateBoardMfocBlive    000005C0 R  text 
+updateBoardMfocS        000005CC R  text 
+updateBoardS            00000618 R  text 
+updateBoardSHelp        00000620 R  text 
+updateBoardcol          00000714 R  data 

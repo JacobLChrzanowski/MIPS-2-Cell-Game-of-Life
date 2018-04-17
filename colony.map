@@ -1,0 +1,134 @@
+Load map
+========
+
+Module:  colony.obj
+ Text segment:  2544 bytes, load point 0x00400000
+ Data segment:  2296 bytes, load point 0x10000000
+ Symbols:
+                  Name Section Mode    Value
+         mainpText5err   Text   R   0x0040090c
+           mainpText4a   Text   R   0x00400800
+           mainpText4b   Text   R   0x00400854
+                p1Warn   Data   R   0x10000843
+         mainpText6err   Text   R   0x0040099c
+          updateBoardM   Text   R   0x0040050c
+                  pipe   Data   R   0x10000724
+        getNeighborsDg   Text   R   0x00400368
+        mainpText4bPre   Text   R   0x0040084c
+          updateBoardS   Text   R   0x00400618
+        A_FRAMESIZE_40          A   0x00000028
+        updateBoardcol   Data   R   0x10000714
+       getNeighborsRDg   Text   R   0x00400468
+      updateBoardMfocA   Text   R   0x0040054c
+        getNeighborsLg   Text   R   0x004002c8
+      updateBoardMfocB   Text   R   0x0040058c
+      updateBoardMHelp   Text   R   0x00400514
+          getNeighbors   Text   R   0x00400258
+           mainpText5a   Text   R   0x004008d4
+           mainpText5b   Text   R   0x004008e4
+              printNum   Text   R   0x00400024
+                    lf   Data   R   0x1000071e
+          mainProc1duB   Text   R   0x004009e0
+      updateBoardMfocS   Text   R   0x004005cc
+           copyStPloop   Text   R   0x00400218
+             mainProc1   Text   R   0x004009b8
+         printRowSHelp   Text   R   0x004000a8
+      getNeighborsLDg2   Text   R   0x004004c8
+       getNeighborsDgA   Text   R   0x00400390
+       getNeighborsDgB   Text   R   0x00400398
+  updateBoardMfocAlive   Text   R   0x00400580
+       getNeighborsLDg   Text   R   0x004004c0
+           mainpText6a   Text   R   0x00400920
+           mainpText6b   Text   R   0x00400930
+        getNeighborsUg   Text   R   0x00400318
+      getNeighborsLDgA   Text   R   0x004004f0
+      getNeighborsLDgB   Text   R   0x004004f8
+                 debug   Data   R   0x10000726
+       getNeighborsRUg   Text   R   0x004003b8
+       getNeighborsDgS   Text   R   0x004003a0
+                p4Warn   Data   R   0x100008d3
+      getNeighborsLDgS   Text   R   0x00400500
+     updateBoardMHelpD   Text   R   0x004005ec
+                arrayP   Data   R   0x10000000
+               copyStP   Text   R   0x004001cc
+  updateBoardMfocBkill   Text   R   0x004005b4
+                arrayS   Data   R   0x10000384
+      getNeighborsLUg2   Text   R   0x00400418
+              genToRun   Data   R   0x1000070c
+       getNeighborsUgA   Text   R   0x00400340
+       getNeighborsUgB   Text   R   0x00400348
+                iText1   Data   R   0x1000077d
+                iText2   Data   R   0x10000792
+             printRowM   Text   R   0x0040004c
+      getNeighborsLUgA   Text   R   0x00400440
+      getNeighborsLUgB   Text   R   0x00400448
+                p2Warn   Data   R   0x1000086c
+             printRowS   Text   R   0x004000a0
+           printString   Text   R   0x00400018
+           updateBoard   Text   R   0x00400644
+       getNeighborsLUg   Text   R   0x00400410
+      getNeighborsRDg2   Text   R   0x00400470
+                  size   Data   R   0x10000718
+       getNeighborsUgS   Text   R   0x00400350
+                  dash   Data   R   0x10000722
+       getNeighborsRgA   Text   R   0x004002a0
+       getNeighborsRgB   Text   R   0x004002a8
+      getNeighborsLUgS   Text   R   0x00400450
+               pBoardT   Text   R   0x00400030
+      getNeighborsRDgA   Text   R   0x00400498
+      getNeighborsRDgB   Text   R   0x004004a0
+          mainProc1pre   Text   R   0x004009b0
+          PRINT_STRING          A   0x00000004
+       getNeighborsRgS   Text   R   0x004002b0
+         printRowMHelp   Text   R   0x00400064
+        mainpText4loop   Text   R   0x00400830
+                  main   Text   RG  0x004006c4
+      getNeighborsRDgS   Text   R   0x004004a8
+           mainpText1b   Text   R   0x0040070c
+                 space   Data   R   0x1000071c
+      getNeighborsRUg2   Text   R   0x004003c0
+                  plus   Data   R   0x10000720
+       getNeighborsLgA   Text   R   0x004002f0
+       getNeighborsLgB   Text   R   0x004002f8
+  updateBoardMfocBlive   Text   R   0x004005c0
+             boardSize   Data   R   0x10000708
+      getNeighborsRUgA   Text   R   0x004003e8
+      updateBoardSHelp   Text   R   0x00400620
+      getNeighborsRUgB   Text   R   0x004003f0
+           mainProc1uB   Text   R   0x004009c0
+           mainpText2a   Text   R   0x00400748
+           mainpText2b   Text   R   0x00400760
+       getNeighborsLgS   Text   R   0x00400300
+      getNeighborsRUgS   Text   R   0x004003f8
+         mainpText1err   Text   R   0x00400734
+              getInput   Text   R   0x00400000
+            printBoard   Text   R   0x004000c4
+         mainpText2err   Text   R   0x00400788
+                debuga   Data   R   0x1000072d
+           mainpText3a   Text   R   0x0040079c
+                pText1   Data   R   0x1000079c
+           mainpText3b   Text   R   0x004007c4
+                pText2   Data   R   0x100007b0
+        getNeighborsRg   Text   R   0x00400278
+                pText3   Data   R   0x100007d5
+                pText4   Data   R   0x100007ff
+                pText5   Data   R   0x10000819
+                p3Warn   Data   R   0x100008a0
+         mainpText3err   Text   R   0x004007ec
+                sText1   Data   R   0x10000735
+                sText2   Data   R   0x1000074d
+                sText3   Data   R   0x10000765
+             PRINT_INT          A   0x00000001
+  updateBoardMfocAkill   Text   R   0x00400574
+            PRINT_CHAR          A   0x0000000b
+             printChar   Text   R   0x0040000c
+         mainpText4err   Text   R   0x004008c0
+         A_FRAMESIZE_8          A   0x00000008
+            generation   Data   R   0x10000710
+
+Module:  r2k_startup.obj
+ Text segment:  36 bytes, load point 0x004009f0
+ Symbols:
+                  Name Section Mode    Value
+             SYS_EXIT2          A   0x00000011
+        __r2k__entry__   Text   RG  0x004009f4
